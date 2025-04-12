@@ -13,3 +13,5 @@ wheels/
 .env.development
 .env.test
 .env.production
+
+*.db

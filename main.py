@@ -1,3 +1,4 @@
+from google import genai
 import discord
 from discord.ext import commands
 import secrets
@@ -8,11 +9,9 @@ from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 load_dotenv()
 
-# import google.generativeai as genai
 
-# GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-# genai.configure(api_key=GOOGLE_API_KEY)
-# gemini = genai.GenerativeModel("gemini-1.5-flash-002")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+gemini = genai.Client(api_key=GOOGLE_API_KEY)
 
 # --- おみくじの種類とテキスト ---
 fortunes = {
@@ -80,7 +79,10 @@ async def omikuji(interaction: discord.Interaction):
 
     # おみくじを引く
     fortune = secrets.choice(list(fortunes.keys()))
-    flavor = fortunes[fortune]
+    flavor_res = gemini.models.generate_content(
+        model='gemini-2.0-flash-001',
+        contents=f"「{fortune}」という運勢のフレーバーテキストを日本語で一行だけ生成してください。出力は「{fortunes[fortune]}」のようにしてください。")
+    flavor = flavor_res.text
 
     # データベースに記録
     c.execute("INSERT INTO draws (user_id, draw_date, fortune) VALUES (?, ?, ?)",
