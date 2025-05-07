@@ -15,3 +15,5 @@ wheels/
 .env.production
 
 *.db
+
+.DS_Store
