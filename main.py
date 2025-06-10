@@ -96,8 +96,8 @@ async def omikuji(interaction: discord.Interaction):
     conn.commit()
 
     # 結果を送信
-    await interaction.followup.edit_message(
-        f"🎴 {interaction.user.mention} の運勢は **{fortune}**！\n{flavor}"
+    await interaction.followup.send(
+        content=f"🎴 {interaction.user.mention} の運勢は **{fortune}**！\n{flavor}"
     )
 
 # --- /omikuji_stats コマンド（出現回数確認） ---
