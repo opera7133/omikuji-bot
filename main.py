@@ -67,6 +67,7 @@ async def on_ready():
 # --- /omikuji コマンド ---
 @bot.tree.command(name="omikuji", description="今日の運勢を占います（1日1回）")
 async def omikuji(interaction: discord.Interaction):
+    await interaction.response.defer()
     user_id = interaction.user.id
     today = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 
@@ -95,7 +96,7 @@ async def omikuji(interaction: discord.Interaction):
     conn.commit()
 
     # 結果を送信
-    await interaction.response.send_message(
+    await interaction.followup.edit_message(
         f"🎴 {interaction.user.mention} の運勢は **{fortune}**！\n{flavor}"
     )
 
