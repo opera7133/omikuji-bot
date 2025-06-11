@@ -1,6 +1,7 @@
 from google import genai
 import discord
 from discord.ext import commands
+from discord import app_commands
 import secrets
 import sqlite3
 import os
@@ -58,6 +59,28 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # スラッシュコマンドの登録
 
 
+class Confirm(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    @discord.ui.button(label='確認', style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message('確認中', ephemeral=True)
+        self.value = True
+        self.stop()
+
+    @discord.ui.button(label='キャンセル', style=discord.ButtonStyle.grey)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message('キャンセル中', ephemeral=True)
+        self.value = False
+        self.stop()
+
+
+def is_admin(interaction: discord.Interaction):
+    return interaction.user.guild_permissions.administrator
+
+
 @bot.event
 async def on_ready():
     await bot.tree.sync()
@@ -75,7 +98,7 @@ async def omikuji(interaction: discord.Interaction):
     c.execute(
         "SELECT * FROM draws WHERE user_id = ? AND draw_date = ?", (user_id, today))
     if c.fetchone():
-        await interaction.response.send_message("おみくじは1日1回までです！また明日お試しください🌅", ephemeral=True)
+        await interaction.followup.send("おみくじは1日1回までです！また明日お試しください🌅", ephemeral=True)
         return
 
     # おみくじを引く
@@ -113,6 +136,74 @@ async def omikuji_stats(interaction: discord.Interaction):
         msg += f"- **{fortune}**: {count}回\n"
 
     await interaction.response.send_message(msg)
+
+# データベース完全リセット
+
+
+@bot.tree.command(name="omikuji_db_reset", description="【管理者専用】データベースを完全リセットします（要確認）")
+@app_commands.check(is_admin)
+async def omikuji_db_reset(interaction: discord.Interaction):
+    view = Confirm()
+    await interaction.response.send_message(
+        "⚠️ 本当にデータベースを完全リセットしますか？ `/omikuji_db_reset_confirm` を実行すると全データが消えます。",
+        view=view,
+        ephemeral=True
+    )
+    await view.wait()
+    await interaction.delete_original_response()
+    if view.value is None:
+        return
+    elif view.value:
+        c.execute("DROP TABLE IF EXISTS draws")
+        c.execute("DROP TABLE IF EXISTS stats")
+        # 再作成
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS draws (
+                user_id INTEGER,
+                draw_date TEXT,
+                fortune TEXT
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS stats (
+                fortune TEXT PRIMARY KEY,
+                count INTEGER
+            )
+        ''')
+        for fortune in fortunes:
+            c.execute(
+                "INSERT OR IGNORE INTO stats (fortune, count) VALUES (?, ?)", (fortune, 0))
+        conn.commit()
+        await interaction.followup.send("✅ データベースを完全リセットしました。", ephemeral=True)
+        return
+    else:
+        await interaction.followup.send("❌ データベースのリセットをキャンセルしました。", ephemeral=True)
+        return
+
+# 今日の運勢のリセット（全ユーザ）
+
+
+@bot.tree.command(name="omikuji_today_reset", description="【管理者専用】今日の運勢記録を全ユーザ分リセットします")
+@app_commands.check(is_admin)
+async def omikuji_today_reset(interaction: discord.Interaction):
+    today = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
+    c.execute("DELETE FROM draws WHERE draw_date = ?", (today,))
+    conn.commit()
+    await interaction.response.send_message("✅ 今日の運勢記録を全ユーザ分リセットしました。", ephemeral=True)
+
+# 特定ユーザの今日の運勢リセット
+
+
+@bot.tree.command(name="omikuji_user_today_reset", description="【管理者専用】指定ユーザの今日の運勢記録をリセットします")
+@app_commands.describe(user="リセットしたいユーザ")
+@app_commands.check(is_admin)
+async def omikuji_user_today_reset(interaction: discord.Interaction, user: discord.User):
+    today = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
+    c.execute("DELETE FROM draws WHERE user_id = ? AND draw_date = ?",
+              (user.id, today))
+    conn.commit()
+    await interaction.response.send_message(f"✅ {user.mention} の今日の運勢記録をリセットしました。", ephemeral=True)
+
 
 # --- Botの起動 ---
 # あなたのDiscord Botトークンに置き換えてください
