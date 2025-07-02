@@ -5,7 +5,7 @@ from discord import app_commands
 import secrets
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 load_dotenv()
@@ -137,6 +137,29 @@ async def omikuji_stats(interaction: discord.Interaction):
 
     await interaction.response.send_message(msg)
 
+# ...existing code...
+
+
+@bot.tree.command(name="omikuji_history", description="直近1週間のおみくじ履歴を表示します（自分のみ）")
+async def omikuji_history(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
+    week_ago = today - timedelta(days=6)
+    c.execute(
+        "SELECT draw_date, fortune FROM draws WHERE user_id = ? AND draw_date BETWEEN ? AND ? ORDER BY draw_date DESC",
+        (user_id, week_ago.isoformat(), today.isoformat())
+    )
+    rows = c.fetchall()
+    if not rows:
+        await interaction.response.send_message("直近1週間のおみくじ履歴はありません。", ephemeral=True)
+        return
+
+    msg = f"📅 **{interaction.user.display_name}さんの直近1週間のおみくじ履歴**\n"
+    for draw_date, fortune in rows:
+        msg += f"- {draw_date}: **{fortune}**\n"
+    await interaction.response.send_message(msg, ephemeral=True)
+
+# ...existing code...
 # データベース完全リセット
 
 
