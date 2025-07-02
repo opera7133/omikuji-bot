@@ -157,7 +157,7 @@ async def omikuji_history(interaction: discord.Interaction):
     msg = f"📅 **{interaction.user.display_name}さんの直近1週間のおみくじ履歴**\n"
     for draw_date, fortune in rows:
         msg += f"- {draw_date}: **{fortune}**\n"
-    await interaction.response.send_message(msg, ephemeral=True)
+    await interaction.response.send_message(msg)
 
 # ...existing code...
 # データベース完全リセット
