@@ -140,7 +140,7 @@ async def omikuji_stats(interaction: discord.Interaction):
 # ...existing code...
 
 
-@bot.tree.command(name="omikuji_history", description="直近1週間のおみくじ履歴を表示します（自分のみ）")
+@bot.tree.command(name="omikuji_history", description="直近1週間のおみくじ履歴を表示します")
 async def omikuji_history(interaction: discord.Interaction):
     user_id = interaction.user.id
     today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
