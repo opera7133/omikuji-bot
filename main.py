@@ -106,7 +106,7 @@ async def omikuji(interaction: discord.Interaction):
     flavor = fortunes[fortune]
     try:
         flavor_res = gemini.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=f"「{fortune}」という運勢のフレーバーテキストを日本語で一行だけ生成してください。出力は「{fortunes[fortune]}」のように、文章だけにしてください。出力する文章は変えてください。")
         flavor = flavor_res.text
     except:
