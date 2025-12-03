@@ -227,6 +227,28 @@ async def omikuji_user_today_reset(interaction: discord.Interaction, user: disco
     conn.commit()
     await interaction.response.send_message(f"✅ {user.mention} の今日の運勢記録をリセットしました。", ephemeral=True)
 
+# --- チャンネル内のユーザーをランダムに抽選 ---
+
+
+@bot.tree.command(name="lottery", description="このチャンネル内の誰かをランダムに抽選します")
+async def lottery(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    # チャンネル内のメンバーを取得
+    members = []
+    async for member in interaction.channel.members:
+        # ボットと実行者を除外
+        if not member.bot and member.id != interaction.user.id:
+            members.append(member)
+
+    if not members:
+        await interaction.followup.send("抽選対象者がいません。他のメンバーが必要です。", ephemeral=True)
+        return
+
+    # ランダムに選択
+    selected = secrets.choice(members)
+    await interaction.followup.send(f"🎉 抽選者: {selected.mention} が選ばれました！")
+
 
 # --- Botの起動 ---
 # あなたのDiscord Botトークンに置き換えてください
