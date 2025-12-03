@@ -54,6 +54,7 @@ conn.commit()
 
 # --- Botのセットアップ ---
 intents = discord.Intents.default()
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # スラッシュコマンドの登録
@@ -236,7 +237,7 @@ async def lottery(interaction: discord.Interaction):
 
     # チャンネル内のメンバーを取得
     members = []
-    async for member in interaction.channel.members:
+    for member in interaction.channel.members:
         # ボットと実行者を除外
         if not member.bot:
             members.append(member)
