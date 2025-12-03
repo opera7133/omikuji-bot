@@ -238,7 +238,7 @@ async def lottery(interaction: discord.Interaction):
     members = []
     async for member in interaction.channel.members:
         # ボットと実行者を除外
-        if not member.bot and member.id != interaction.user.id:
+        if not member.bot:
             members.append(member)
 
     if not members:
@@ -247,7 +247,7 @@ async def lottery(interaction: discord.Interaction):
 
     # ランダムに選択
     selected = secrets.choice(members)
-    await interaction.followup.send(f"🎉 抽選者: {selected.mention} が選ばれました！")
+    await interaction.followup.send(f"🎉 {selected.mention} が選ばれました！")
 
 
 # --- Botの起動 ---
