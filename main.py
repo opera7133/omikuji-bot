@@ -34,6 +34,7 @@ if not DISCORD_TOKEN:
 gemini_client: genai.Client | None = None
 if GOOGLE_API_KEY:
     gemini_client = genai.Client(api_key=GOOGLE_API_KEY)
+    logger.info("Gemini API Client を初期化しました (使用モデル: %s)", GEMINI_MODEL)
 else:
     logger.warning("GOOGLE_API_KEY が設定されていません。おみくじのフレーバーテキストは固定文が使用されます。")
 
@@ -94,6 +95,7 @@ async def generate_flavor_text(fortune: str) -> str:
     """Gemini API を使って非同期でフレーバーテキストを生成する"""
     default_flavor = fortunes.get(fortune, "今日という一日を大切に過ごしましょう。")
     if not gemini_client:
+        logger.debug("gemini_client が初期化されていないため、デフォルトテキストを使用します。")
         return default_flavor
 
     prompt = (
@@ -105,22 +107,40 @@ async def generate_flavor_text(fortune: str) -> str:
         "- 出力する文章は毎回変えて、ユニークで味のある表現にしてください。"
     )
 
+    # 1. 思考（Thinking）を無効化（思考トークンで max_output_tokens が枯渇するのを防止し、即座に応答）
+    # 2. 自動関数呼び出し（AFC）を無効化（単なるテキスト生成なので警告ログを抑制）
+    # 3. max_output_tokens に余裕を持たせる（300トークン）
+    config = types.GenerateContentConfig(
+        temperature=1.0,
+        max_output_tokens=300,
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+
     try:
-        # discord.py のイベントループをブロックしないよう非同期API (.aio) を使用
         response = await gemini_client.aio.models.generate_content(
             model=GEMINI_MODEL,
             contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=1.0,
-                max_output_tokens=100,
-            )
+            config=config,
         )
-        text = response.text.strip() if response.text else ""
-        # 前後の引用符や空白をクリーンアップ
-        cleaned = text.strip('"\'「」\n\r ')
-        return cleaned if cleaned else default_flavor
+
+        if response.text:
+            cleaned = response.text.strip().strip('"\'「」\n\r ')
+            if cleaned:
+                return cleaned
+
+        # 本文が空だった場合（セーフティや思考のみで終わった場合など）
+        logger.warning(
+            "Gemini APIから本文テキストが返されませんでした (モデル: %s, candidates: %s)。デフォルトテキストを使用します。",
+            GEMINI_MODEL,
+            response.candidates,
+        )
+        return default_flavor
     except Exception as e:
-        logger.warning("Gemini API呼び出しに失敗しました (モデル: %s): %s。デフォルトテキストを使用します。", GEMINI_MODEL, e)
+        logger.exception(
+            "Gemini API呼び出し中にエラーが発生しました (モデル: %s)。デフォルトテキストを使用します。",
+            GEMINI_MODEL,
+        )
         return default_flavor
 
 
